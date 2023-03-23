@@ -2,13 +2,14 @@ import asyncio
 import configparser
 from graph import Graph
 
+
 async def main():
-    print('Python Graph Tutorial\n')
+    print("Python Graph Tutorial\n")
 
     # Load settings
     config = configparser.ConfigParser()
-    config.read(['config.cfg', 'config.dev.cfg'])
-    azure_settings = config['azure']
+    config.read(["config.cfg", "config.dev.cfg"])
+    azure_settings = config["azure"]
 
     graph: Graph = Graph(azure_settings)
 
@@ -17,12 +18,12 @@ async def main():
     choice = -1
 
     while choice != 0:
-        print('Please choose one of the following options:')
-        print('0. Exit')
-        print('1. Display access token')
-        print('2. List my inbox')
-        print('3. Send mail')
-        print('4. Make a Graph call')
+        print("Please choose one of the following options:")
+        print("0. Exit")
+        print("1. Display access token")
+        print("2. List my inbox")
+        print("3. Send mail")
+        print("4. Make a Graph call")
 
         try:
             choice = int(input())
@@ -30,7 +31,7 @@ async def main():
             choice = -1
 
         if choice == 0:
-            print('Goodbye...')
+            print("Goodbye...")
         elif choice == 1:
             await display_access_token(graph)
         elif choice == 2:
@@ -40,29 +41,58 @@ async def main():
         elif choice == 4:
             await make_graph_call(graph)
         else:
-            print('Invalid choice!\n')
+            print("Invalid choice!\n")
+
 
 async def greet_user(graph: Graph):
-    # TODO
-    return
+    user = await graph.get_user()
+    if user is not None:
+        print("Hello,", user.display_name)
+        # For Work/school accounts, email is in mail property
+        # Personal accounts, email is in userPrincipalName
+        print("Email:", user.mail or user.user_principal_name, "\n")
+
 
 async def display_access_token(graph: Graph):
-    # TOO
     token = await graph.get_user_token()
-    print('User token:', token, '\n')
-    return
+    print("User token:", token, "\n")
+
 
 async def list_inbox(graph: Graph):
-    # TODO
-    return
+    message_page = await graph.get_inbox()
+    if message_page is not None and message_page.value is not None:
+        # Output each message's details
+        for message in message_page.value:
+            print("Message:", message.subject)
+            if message.from_ is not None and message.from_.email_address is not None:
+                print("  From:", message.from_.email_address.name or "NONE")
+            else:
+                print("  From: NONE")
+            print("  Status:", "Read" if message.is_read else "Unread")
+            print("  Received:", message.received_date_time)
+
+        # If @odata.nextLink is present
+        more_available = message_page.odata_next_link is not None
+        print("\nMore messages available?", more_available, "\n")
+
 
 async def send_mail(graph: Graph):
-    # TODO
-    return
+    # Send mail to the signed-in user
+    # Get the user for their email address
+    user = await graph.get_user()
+    if user is not None:
+        user_email = user.mail or user.user_principal_name
+
+        await graph.send_mail(
+            "Testing Microsoft Graph", "Hello world!", user_email or ""
+        )
+        print("Mail sent.\n")
+
 
 async def make_graph_call(graph: Graph):
     # TODO
     return
+
 
 # Run main
 asyncio.run(main())
